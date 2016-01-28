@@ -1,10 +1,16 @@
 package com.example;
 
-import org.springframework.hateoas.ResourceSupport;
-
-public class User extends ResourceSupport {
+public class User {
 
     private String name;
+
+    public User() {
+        this.name = "";
+    }
+
+    public User(String name) {
+        this.name = name;
+    }
 
     public String getName() {
         return name;

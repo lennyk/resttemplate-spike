@@ -1,11 +1,16 @@
 package com.example;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClients;
+
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.hal.Jackson2HalModule;
 import org.springframework.http.HttpEntity;
@@ -16,21 +21,18 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class UseRestTemplate {
 
-    private ParameterizedTypeReference<User> parameterizedUserType;
-    private ParameterizedTypeReference<Resources<User>> parameterizedUsersType;
+    private ParameterizedTypeReference<Resource<User>> parameterizedUserType;
+    private ParameterizedTypeReference<Resources<Resource<User>>> parameterizedUsersType;
     private RestTemplate restTemplate;
 
     public UseRestTemplate() {
-        parameterizedUserType = new ParameterizedTypeReference<User>() { };
-        parameterizedUsersType = new ParameterizedTypeReference<Resources<User>>() { };
+        parameterizedUserType = new ParameterizedTypeReference<Resource<User>>() { };
+        parameterizedUsersType = new ParameterizedTypeReference<Resources<Resource<User>>>() { };
         restTemplate = getRestTemplate();
     }
 
@@ -58,8 +60,18 @@ public class UseRestTemplate {
         return template;
     }
 
-    public void getUser() {
-        User user = restTemplate.exchange(
+    public Resource<User> createUser(String name) {
+        User newUser = new User(name);
+
+        return restTemplate.exchange(
+                "http://localhost:8080/users/1",
+                HttpMethod.PUT,
+                new HttpEntity<>(newUser),
+                parameterizedUserType).getBody();
+    }
+
+    public Resource<User> getUser() {
+        Resource<User> user = restTemplate.exchange(
                 "http://localhost:8080/users/1",
                 HttpMethod.GET,
                 null,
@@ -67,36 +79,42 @@ public class UseRestTemplate {
                 .getBody();
 
         System.out.println(user);
+
+        return user;
     }
 
-    public void getUsers() {
-        Collection<User> users = restTemplate.exchange(
+    public Resources<Resource<User>> getUsers() {
+        Resources<Resource<User>> users = restTemplate.exchange(
                 "http://localhost:8080/users",
                 HttpMethod.GET,
                 null,
                 parameterizedUsersType)
-                .getBody().getContent();
+                .getBody();
 
         System.out.println(users);
+
+        return users;
     }
 
-    public void saveUser() {
-        User user = restTemplate.exchange(
+    public Resource<User> saveUser() {
+        Resource<User> user = restTemplate.exchange(
                 "http://localhost:8080/users/1",
                 HttpMethod.GET,
                 null,
                 parameterizedUserType)
                 .getBody();
 
-        user.setName("modified user");
+        user.getContent().setName("modified user");
 
-        User savedUser = restTemplate.exchange(
+        Resource<User> savedUser = restTemplate.exchange(
                 "http://localhost:8080/users/1",
                 HttpMethod.PATCH,
-                new HttpEntity<User>(user),
+                new HttpEntity<>(user.getContent()),
                 parameterizedUserType)
                 .getBody();
 
         System.out.println(savedUser);
+
+        return savedUser;
     }
 }
