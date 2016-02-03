@@ -10,8 +10,9 @@ import org.apache.http.impl.client.HttpClients;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.hateoas.MediaTypes;
-import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.RelProvider;
 import org.springframework.hateoas.Resources;
+import org.springframework.hateoas.core.EvoInflectorRelProvider;
 import org.springframework.hateoas.hal.Jackson2HalModule;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -23,16 +24,17 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
-public class UseRestTemplate {
+public class UserResourceRestTemplate {
 
-    private ParameterizedTypeReference<Resource<User>> parameterizedUserType;
-    private ParameterizedTypeReference<Resources<Resource<User>>> parameterizedUsersType;
+    private ParameterizedTypeReference<UserResource> parameterizedUserType;
+    private ParameterizedTypeReference<Resources<UserResource>> parameterizedUsersType;
     private RestTemplate restTemplate;
 
-    public UseRestTemplate() {
-        parameterizedUserType = new ParameterizedTypeReference<Resource<User>>() { };
-        parameterizedUsersType = new ParameterizedTypeReference<Resources<Resource<User>>>() { };
+    public UserResourceRestTemplate() {
+        parameterizedUserType = new ParameterizedTypeReference<UserResource>() { };
+        parameterizedUsersType = new ParameterizedTypeReference<Resources<UserResource>>() { };
         restTemplate = getRestTemplate();
     }
 
@@ -42,8 +44,12 @@ public class UseRestTemplate {
         List<HttpMessageConverter<?>> converters = new ArrayList<HttpMessageConverter<?>>();
         converters.add(new StringHttpMessageConverter(Charset.forName("UTF-8")));
 
+        RelProvider relProvider = new EvoInflectorRelProvider();
+
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new Jackson2HalModule());
+        mapper.setHandlerInstantiator(new Jackson2HalModule.HalHandlerInstantiator(relProvider, null, null));
+        mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         MappingJackson2HttpMessageConverter halConverter = new MappingJackson2HttpMessageConverter();
         halConverter.setObjectMapper(mapper);
@@ -60,8 +66,8 @@ public class UseRestTemplate {
         return template;
     }
 
-    public Resource<User> createUser(String name) {
-        User newUser = new User(name);
+    public UserResource createUser(String name) {
+        UserResource newUser = new UserResource(name);
 
         return restTemplate.exchange(
                 "http://localhost:8080/users/1",
@@ -70,8 +76,8 @@ public class UseRestTemplate {
                 parameterizedUserType).getBody();
     }
 
-    public Resource<User> getUser() {
-        Resource<User> user = restTemplate.exchange(
+    public UserResource getUser() {
+        UserResource user = restTemplate.exchange(
                 "http://localhost:8080/users/1",
                 HttpMethod.GET,
                 null,
@@ -83,8 +89,8 @@ public class UseRestTemplate {
         return user;
     }
 
-    public Resources<Resource<User>> getUsers() {
-        Resources<Resource<User>> users = restTemplate.exchange(
+    public Resources<UserResource> getUsers() {
+        Resources<UserResource> users = restTemplate.exchange(
                 "http://localhost:8080/users",
                 HttpMethod.GET,
                 null,
@@ -96,20 +102,20 @@ public class UseRestTemplate {
         return users;
     }
 
-    public Resource<User> saveUser() {
-        Resource<User> user = restTemplate.exchange(
+    public UserResource saveUser() {
+        UserResource user = restTemplate.exchange(
                 "http://localhost:8080/users/1",
                 HttpMethod.GET,
                 null,
                 parameterizedUserType)
                 .getBody();
 
-        user.getContent().setName("modified user");
+        user.setName("modified user");
 
-        Resource<User> savedUser = restTemplate.exchange(
+        UserResource savedUser = restTemplate.exchange(
                 "http://localhost:8080/users/1",
                 HttpMethod.PATCH,
-                new HttpEntity<>(user.getContent()),
+                new HttpEntity<>(user),
                 parameterizedUserType)
                 .getBody();
 
